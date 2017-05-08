@@ -1,40 +1,48 @@
 import { Component } from 'react'
-import { URL } from 'universal-url'
 import fetch from 'isomorphic-unfetch'
-import Progress from '../../progress'
+import CircleProgress from '../../circle-progress'
 import Widget from '../../widget'
 
 export default class PageSpeedInsights extends Component {
   static defaultProps = {
-    filter_third_party_resources: true,
+    filterThirdPartyResources: true,
     locale: 'de_DE',
-    strategy: 'desktop'
+    strategy: 'desktop',
+    title: 'PageSpeed Score'
   }
 
   state = {
-    score: 0
+    score: 0,
+    loading: true,
+    error: false
   }
 
   async componentDidMount () {
-    const { url, filter_third_party_resources, locale, strategy } = this.props
+    const { url, filterThirdPartyResources, locale, strategy } = this.props
 
-    const urlObj = new URL('https://www.googleapis.com/pagespeedonline/v2/runPagespeed')
-    urlObj.searchParams.append('url', url)
-    urlObj.searchParams.append('filter_third_party_resources', filter_third_party_resources)
-    urlObj.searchParams.append('locale', locale)
-    urlObj.searchParams.append('strategy', strategy)
+    const searchParams = [
+      `url=${url}`,
+      `filter_third_party_resources=${filterThirdPartyResources}`,
+      `locale=${locale}`,
+      `strategy=${strategy}`
+    ].join('&')
 
-    const res = await fetch(urlObj.toString()) // eslint-disable-line no-undef
-    const json = await res.json()
+    try {
+      const res = await fetch(`https://www.googleapis.com/pagespeedonline/v2/runPagespeed?${searchParams}`)
+      const json = await res.json()
 
-    this.setState({ score: json.ruleGroups.SPEED.score })
+      this.setState({ loading: false, score: json.ruleGroups.SPEED.score })
+    } catch (error) {
+      this.setState({ loading: false, error: true })
+    }
   }
 
   render () {
-    const { score } = this.state
+    const { error, loading, score } = this.state
+    const { title } = this.props
     return (
-      <Widget title='PageSpeed Score'>
-        <Progress value={score} />
+      <Widget title={title} loading={loading} error={error}>
+        <CircleProgress value={score} />
       </Widget>
     )
   }
